@@ -4,11 +4,16 @@
     <title>My Page</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
+    <link rel="stylesheet" href="css/style.css" />
     <script src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
     <script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
 
     <!-- Local development libaries loaded -->
     <script type="text/javascript" src="script/mobile.js"></script>
+    <script type="text/javascript" src="script/notes.js"></script>
+    <script type="text/javascript" src="script/server.js"></script>
+    <script type="text/javascript" src="script/savehandler.js"></script>
+    <script type="text/javascript" src="script/keyboard.js"></script>
 
     <script type="text/javascript" src="script/basic.js"></script>
     <script type="text/javascript" src="script/main.js"></script>
@@ -27,11 +32,12 @@
                 <div id="notes">
                     
                 </div>
-                <ul data-role="listview" style="margin-top: 0px;">
-                    <li data-role="list-divider">Title to come</li>
-                    <li><a href="index.html">LogIn</a></li>
-                    <li><a href="index.html">Create user</a></li>
-                    <li><a href="index.html">Go online</a></li>
+                <ul id="LoginControls" data-role="listview" style="margin-top: 0px;">
+                    <li class="title" data-role="list-divider">Title to come</li>
+                    <li id="LogInButton"><a href="javascript:void(0);">LogIn</a></li>
+                    <li id="LogOutButton"><a href="javascript:void(0);">LogOut</a></li>
+                    <li id="CreateUserButton"><a href="javascript:void(0);">Create user</a></li>
+                    <li id="GoOnlineButton"><a href="javascript:void(0);">Go online</a></li>
 
                 </ul>
             </div>

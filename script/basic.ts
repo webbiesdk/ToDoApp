@@ -54,6 +54,17 @@ class HashMap {
         }
         return found;
     }
+    public getEntryArray() {
+        var res: Entry[] = [];
+        $.each(this.map, function (index, value) {
+            if (typeof value !== "undefined") {
+                $.each(value, function (index, value) {
+                    res.push(value);
+                });
+            }
+        });
+        return res;
+    }
     private rehashTo(newSize: number) {
         var newMap = new HashMap(newSize);
         $.each(newMap.map, function (index, value) {

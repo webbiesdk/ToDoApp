@@ -61,6 +61,17 @@ var HashMap = (function () {
         }
         return found;
     };
+    HashMap.prototype.getEntryArray = function () {
+        var res = [];
+        $.each(this.map, function (index, value) {
+            if(typeof value !== "undefined") {
+                $.each(value, function (index, value) {
+                    res.push(value);
+                });
+            }
+        });
+        return res;
+    };
     HashMap.prototype.rehashTo = function (newSize) {
         var newMap = new HashMap(newSize);
         $.each(newMap.map, function (index, value) {

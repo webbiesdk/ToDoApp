@@ -1,0 +1,5 @@
+﻿/* Fixing that headlines with no-text are to small. */
+.ui-btn-inner{ 
+    height: "20px"; 
+    display: "block"; 
+}

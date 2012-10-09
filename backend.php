@@ -11,7 +11,7 @@ Home made error codes:
 $hostname = "host";
 $username = "username";
 $password = "pass";
-$dabebase = "DB";
+$dabebase = "db";
 mysql_connect($hostname, $username, $password) or die(mysql_error());
 mysql_select_db($dabebase) or die(mysql_error());
 mysql_query("CREATE TABLE IF NOT EXISTS notes_users(
