@@ -68,7 +68,7 @@ class HashMap {
     public size() {
         return this.length;
     }
-    public getEntryArray() {
+    public entryArray() {
         var res: Entry[] = [];
         $.each(this.map, function (index, value) {
             if (typeof value !== "undefined") {
@@ -81,7 +81,7 @@ class HashMap {
     }
     public serialize(translator?: Function): string {
         var res = {};
-        $.each(this.getEntryArray, function (index, entry: Entry) {
+        $.each(this.entryArray, function (index, entry: Entry) {
             var savedValue = entry.value;
             if ($.isFunction(translator)) {
                 savedValue = translator(savedValue);
@@ -123,10 +123,12 @@ class HashMap {
     }
     private rehashTo(newSize: number) {
         var newMap = new HashMap(newSize);
-        $.each(newMap.map, function (index, value) {
-            $.each(value, function (index, value : Entry) {
-                newMap.put(value.key, value.value);
-            });
+        $.each(this.map, function (index, value) {
+            if (typeof value !== "undefined") {
+                $.each(value, function (index, value: Entry) {
+                    newMap.put(value.key, value.value);
+                });
+            }
         });
         this.map = newMap.map;
         this.size = newMap.size;

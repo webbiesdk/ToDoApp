@@ -144,6 +144,12 @@ class LoginHandler {
         this.setStatus(2);
         this.checkLogIn();
     }
+    public getUsername() {
+        if (this.status != 1) {
+            throw "Invalid call, we are not logged in!";
+        }
+        return this.username;
+    }
     public callWhenLoggedIn(callback : Function) {
         this.loggedInCallback = callback;
     }

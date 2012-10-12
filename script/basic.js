@@ -78,7 +78,7 @@ var HashMap = (function () {
     HashMap.prototype.size = function () {
         return this.length;
     };
-    HashMap.prototype.getEntryArray = function () {
+    HashMap.prototype.entryArray = function () {
         var res = [];
         $.each(this.map, function (index, value) {
             if(typeof value !== "undefined") {
@@ -92,7 +92,7 @@ var HashMap = (function () {
     HashMap.prototype.serialize = function (translator) {
         var res = {
         };
-        $.each(this.getEntryArray, function (index, entry) {
+        $.each(this.entryArray, function (index, entry) {
             var savedValue = entry.value;
             if($.isFunction(translator)) {
                 savedValue = translator(savedValue);
@@ -134,10 +134,12 @@ var HashMap = (function () {
     };
     HashMap.prototype.rehashTo = function (newSize) {
         var newMap = new HashMap(newSize);
-        $.each(newMap.map, function (index, value) {
-            $.each(value, function (index, value) {
-                newMap.put(value.key, value.value);
-            });
+        $.each(this.map, function (index, value) {
+            if(typeof value !== "undefined") {
+                $.each(value, function (index, value) {
+                    newMap.put(value.key, value.value);
+                });
+            }
         });
         this.map = newMap.map;
         this.size = newMap.size;

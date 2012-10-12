@@ -15,6 +15,36 @@ class Notes {
             console.log("Note: " + note.id + " was already added!");
         }
     }
+    public addFirst(note: Note, animation? = true) {
+        if (typeof this.noteMap.get(note.id) === "undefined") {
+            this.elem.prepend(note.element);
+            note.element.trigger("create");
+            this.elem.trigger("create");
+            if (animation) {
+                note.element.hide().slideDown(400);
+            }
+            note.updateHeadline();
+            this.noteMap.put(note.id, note);
+        }
+        else {
+            console.log("Note: " + note.id + " was already added!");
+        }
+    }
+    public addAfterFirst(note, animation? = true) {
+        if (typeof this.noteMap.get(note.id) === "undefined") {
+            this.elem.children().eq(0).after(note.element);
+            note.element.trigger("create");
+            this.elem.trigger("create");
+            if (animation) {
+                note.element.hide().slideDown(400);
+            }
+            note.updateHeadline();
+            this.noteMap.put(note.id, note);
+        }
+        else {
+            console.log("Note: " + note.id + " was already added!");
+        }
+    }
     public changeId(from: string, to: string): bool {
         var note: Note = this.noteMap.get(from);
         if (this.noteMap.remove(from)) { 
@@ -31,36 +61,28 @@ class Notes {
         return typeof this.noteMap.get(id) !== "undefined";
     }
     public getNotes() {
-        var noteEntries = this.noteMap.getEntryArray();
+        var noteEntries = this.noteMap.entryArray();
         var res: Note[] = [];
         $.each(noteEntries, function (index, value: Entry) {
             res.push(value.value);
         });
         return res;
     }
-    public addFirst(note: Note, animation? = true) {
-        if (typeof this.noteMap.get(note.id) === "undefined") {
-            this.elem.prepend(note.element);
-            note.element.trigger("create");
-            this.elem.trigger("create");
-            if (animation) {
-                note.element.hide().slideDown(400);
-            }
-            this.noteMap.put(note.id, note);
+    public remove(id : string): bool {
+        var note = this.noteMap.get(id);
+        if (typeof note === "undefined") {
+            console.log("Could note remove note: " + id);
+            return false;
         }
         else {
-            console.log("Note: " + note.id + " was already added!");
+            note.element.slideUp(400, function () {
+                note.element.detach();
+            });
+            return this.noteMap.remove(note.id);
         }
-    }
-    public remove(note: Note): bool {
-        note.element.slideUp(400, function () {
-            note.element.detach();
-        });
-        return this.noteMap.remove(note.id);
     }
 }
 interface SerializedNote {
-    id: string;
     content: string;
 }
 class Note {
@@ -76,12 +98,12 @@ class Note {
         this.textarea = $("<textarea>" + this.content + "</textarea>");
         this.textarea.keyup(function () {
             that.setContent(that.getContent(), false);
-            _.throttle(() => saver.save(this), 300)();
         });
+        this.textarea.keyup( _.debounce(() => saver.save(this), 300));
         this.element.append(this.textarea);
         var deleteButton = $("<a href='javascript:void(0)' class='button' data-role='button' data-icon='delete' data-inline='true'>Delete</a>");
         deleteButton.click(function () {
-            that.saver.deleteNote(that);
+            that.saver.deleteNote(that.id);
             return false;
         });
         this.element.append(deleteButton);
@@ -98,7 +120,6 @@ class Note {
         }).bind('collapse', function () {
             $(this).children().next().slideUp(400);
         });
-
     }
     public setContent(content: string, updateTextarea? = true) {
         this.content = content;
@@ -121,6 +142,9 @@ class Note {
     public collapsed(): bool {
         return this.element.hasClass("ui-collapsible-collapsed");
     }
+    public hasFocus(): bool {
+        return this.element.find("textarea:focus, .button:focus").length != 0;
+    }
     public collapse(): void {
         if (!this.collapsed()) {
             this.headline.click();
@@ -130,19 +154,35 @@ class Note {
         this.element.remove();
     }
     public serialize(): string {
-        var serialized: SerializedNote = { id: this.id, content: this.getContent() };
+        var content = this.getContent();
+        // Escaping some stuff. 
+        content = content.replace(/&/g,'&amp;');
+        content = content.replace(/\"/g,'&#34;');
+        content = content.replace(/\n/g,'&newLine;');
+        var serialized: SerializedNote = {content: content };
         return JSON.stringify(serialized);
     }
-    public static deSerializeToNew(noteString: string, saver: SaveHandler): Note {
-        console.log(noteString);
+    public static deSerializeToNew(id: string, noteString: string, saver: SaveHandler): Note {
         var note: Note = new Note(saver);
-        note.deSerializeIntoThis(noteString);
+        note.deSerializeIntoThis(id, noteString);
         return note;
     }
-    public deSerializeIntoThis(noteString: string): void {
-        var note: SerializedNote = JSON.parse(noteString);
-        this.id = note.id;
-        this.setContent(note.content);
+    public deSerializeIntoThis(id: string, noteString: string): void {
+        var note: SerializedNote;
+        try {
+            note = JSON.parse(noteString);
+        }
+        catch (e) {
+            console.log("Catched: " + e);
+            note = new Note(this.saver, id);
+        }
+        var content = note.content;
+        // Unescaping. 
+        content = content.replace(/&newLine;/g,'\n');
+        content = content.replace(/&#34;/g,'"');
+        content = content.replace(/&amp;/g,'&');
+        this.setContent(content);
+        this.id = id;
     }
     private getHeadline(): string {
         return this.content ? this.content.split(/\n/g)[0] : "";
@@ -157,7 +197,7 @@ class NewNote extends Note {
         super(saver, Note.getNextTempId(), "New note");
         var that = this;
         this.element.one("expand", function () {
-            saver.add(that);
+            saver.add(that.id); // høns
             NewNote.removeContentOverTime(that, 400, function () {
                 that.textarea.focus();
                 notes.addFirst(new NewNote(saver, notes));

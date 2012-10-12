@@ -6,12 +6,15 @@
 /// <reference path="serverqueue.ts" />
 /// <reference path="login.ts" />
 
+declare var Pusher;
 class SaveHandler {
     private serverQueue: ServerQueue;
+    private usePushSync: bool = true;
     constructor (private login: LoginHandler, private server: Server, private notes: Notes) {
         this.serverQueue = new ServerQueue(this, login);
         this.login.callWhenLoggedIn(() => this.loggedIn());
         this.initiate();
+
     }
     private loggedIn() {
         var that = this;
@@ -23,36 +26,72 @@ class SaveHandler {
                         var note = that.notes.getNote(id);
                         if (typeof note === "undefined") {
                             var note = new Note(that);
-                            note.deSerializeIntoThis(value);
+                            note.deSerializeIntoThis(id, value);
                             that.notes.add(note);
                         }
                         else {
-                            note.deSerializeIntoThis(value);
+                            note.deSerializeIntoThis(id, value);
                         }
+                        that.saveLocal(note);
                     }
                     else {
                         console.log(id + " Was in internal queue, cancel inserting");
                     }
-                         
+
                 });
                 that.serverQueue.notify();
             },
             errorCallback: function () {
-                console.log("This really shouldn't happen!");
-            }, 
+                console.log("This really shouldn't happen: ");
+            },
             invalidLoginData: function () {
-                console.log("This really shouldn't happen!");
+                console.log("This really shouldn't happen: ");
             }
         });
+
+
+        // Subscripe to push data. 
+        if (this.usePushSync) {
+            var that = this;
+            var pusher = new Pusher('676b265d9c19258d7336');
+            var channel = pusher.subscribe(this.login.getUsername());
+            channel.bind('TODO', function (data) {
+                data = jQuery.parseJSON(data);
+                $.each(data, function (key, val) {
+                    var noteText = val;
+                    if (key == 'delete') {
+                        that.deleteNote(noteText, false); // In this case, noteText is the ID. 
+                    }
+                    else {
+                        var id = key;
+                        var note = that.notes.getNote(id);
+                        if (typeof note === "undefined") {
+                            var note = new Note(that);
+                            note.deSerializeIntoThis(id, noteText);
+                            that.notes.addAfterFirst(note, true);
+                            that.saveLocal(note);
+                        }
+                        else {
+                            if (!note.hasFocus()) {
+                                note.deSerializeIntoThis(id, noteText);
+                            }
+                        }
+                    }
+                });
+            });
+        }
     }
-    public add(note: Note) {
-        this.serverQueue.added(note.id);
+    public add(id: string) {
+        this.serverQueue.added(id);
     }
-    public save(note: Note, updateView? = true) {
+    public save(note: Note, updateView? = true, updateServer? = true) {
         var that = this;
         // View
         if (updateView) {
             if (!this.notes.contains(note.id)) {
+                console.log("Adding: " + note.id);
+                console.log(this.serverQueue.contains(note.id));
+                console.log(this.notes.getNotes());
                 this.notes.add(note);
             }
         }
@@ -61,13 +100,15 @@ class SaveHandler {
         // Local
         this.saveLocal(note);
     }
-    public deleteNote(note: Note) {
+    public deleteNote(id: string, pushToServer? = true) {
         // update the view
-        this.notes.remove(note);
+        this.notes.remove(id);
         // update the model (local);
-        this.deleteLocal(note.id);
-        // server. 
-        this.serverQueue.deleted(note.id);
+        this.deleteLocal(id);
+        if (pushToServer) {
+            // server. 
+            this.serverQueue.deleted(id);
+        }
     }
     public initiate() {
         this.loadAllLocal();
@@ -75,9 +116,9 @@ class SaveHandler {
     public saveServerAdded(id: string, callback: Function, complete: Function) {
         var that = this;
         this.server.addNote({
-            callback: function (data) {
+            callback: function (newId) {
                 // Set the new ID in the content. 
-                that.notes.changeId(id, data);
+                that.notes.changeId(id, newId);
                 // And in the locally saved content. 
                 var content = localStorage["note_" + id];
 
@@ -85,22 +126,22 @@ class SaveHandler {
 
                 var newNote = new Note(that);
                 if (typeof content !== "undefined") {
-                    newNote.deSerializeIntoThis(content);
+                    newNote.deSerializeIntoThis(newId, content);
                 }
-                newNote.id = data;
-                that.saveLocalFromContent(data, newNote.serialize());
+                newNote.id = newId;
+                that.saveLocalFromContent(newId, newNote.serialize());
                 // And in the serverQueue. 
-                that.serverQueue.changeId(id, data);
+                that.serverQueue.changeId(id, newId);
                 if ($.isFunction(callback)) {
                     callback();
                 }
                 complete();
-            }, 
+            },
             errorCallback: function () {
                 // TODO: Message?
                 that.login.checkLogIn();
                 complete();
-            }, 
+            },
             invalidLoginData: function () {
                 // TODO: Message?
                 that.login.checkLogIn();
@@ -111,19 +152,19 @@ class SaveHandler {
     public saveServerSaved(id: string, note: string, callback: Function, complete: Function) {
         var that = this;
         this.server.saveNote({
-            id : id, 
-            content: note, 
+            id: id,
+            content: note,
             callback: function () {
                 if ($.isFunction(callback)) {
                     callback();
                 }
                 complete();
-            }, 
+            },
             errorCallback: function () {
                 // TODO: Message?
                 that.login.checkLogIn();
                 complete();
-            }, 
+            },
             invalidLoginData: function () {
                 // TODO: Message?
                 that.login.checkLogIn();
@@ -134,18 +175,18 @@ class SaveHandler {
     public saveServerDeleted(id: string, callback: Function, complete: Function) {
         var that = this;
         this.server.deleteNote({
-            id : id, 
+            id: id,
             callback: function () {
                 if ($.isFunction(callback)) {
                     callback();
                 }
                 complete();
-            }, 
+            },
             errorCallback: function () {
                 // TODO: Message?
                 that.login.checkLogIn();
                 complete();
-            }, 
+            },
             invalidLoginData: function () {
                 // TODO: Message?
                 that.login.checkLogIn();
@@ -157,9 +198,9 @@ class SaveHandler {
         var ids = this.getLocalIds();
         var that = this;
         $.each(ids, function (index, value) {
-            var noteString : string = localStorage["note_" + value];
+            var noteString: string = localStorage["note_" + value];
             if (typeof noteString !== "undefined") {
-                that.insertNote(Note.deSerializeToNew(noteString, that));
+                that.insertNote(value, Note.deSerializeToNew(value, noteString, that));
             }
             else {
                 console.log("Note not found in localstorage: " + ("note_" + value));
@@ -173,10 +214,10 @@ class SaveHandler {
         this.addToLocalIds(id);
         localStorage["note_" + id] = content;
     }
-    private insertNote(note: Note, force? = false) {
-        if (this.notes.contains(note.id)) {
+    private insertNote(id: string, note: Note, force? = false) {
+        if (this.notes.contains(id)) {
             if (force) {
-                this.notes.getNote(note.id).deSerializeIntoThis(note.serialize());
+                this.notes.getNote(id).deSerializeIntoThis(id, note.serialize());
             }
         }
         else {
@@ -197,7 +238,7 @@ class SaveHandler {
         $.each(ids, function (index, value) {
             localStorage.removeItem("note_" + value);
         });
-        localStorage.removeItem("notes_idList");
+        localStorage["notes_idList"] = "";
     }
     private addToLocalIds(id: string) {
         var ids = this.getLocalIds();
@@ -213,13 +254,13 @@ class SaveHandler {
         });
         localStorage["notes_idList"] = res;
     }
-    private getLocalIds() : string[]{
+    private getLocalIds(): string[] {
         if (typeof localStorage["notes_idList"] === "undefined") {
             localStorage["notes_idList"] = "";
             return [];
         }
         else {
-            var res : string[] = localStorage["notes_idList"].split(',');
+            var res: string[] = localStorage["notes_idList"].split(',');
             if (!res[res.length - 1]) {
                 res.pop();
             }

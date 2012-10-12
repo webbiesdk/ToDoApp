@@ -140,6 +140,12 @@ var LoginHandler = (function () {
         this.setStatus(2);
         this.checkLogIn();
     }
+    LoginHandler.prototype.getUsername = function () {
+        if(this.status != 1) {
+            throw "Invalid call, we are not logged in!";
+        }
+        return this.username;
+    };
     LoginHandler.prototype.callWhenLoggedIn = function (callback) {
         this.loggedInCallback = callback;
     };
