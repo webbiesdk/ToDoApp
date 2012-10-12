@@ -2,14 +2,14 @@
 
 /// <reference path="jquery.d.ts" />
 class Entry {
-    constructor (public key: String, public value: any) { }
+    constructor (public key: string, public value: any) { }
 }
 
 class HashMap {
     private map: Entry[][] = [];
-    private size = 0;
-    constructor (private maxSize? = 10) { }
-    public get(key: String): any {
+    private length = 0;
+    constructor (private maxSize? = 10, private maxFill? = 3) { }
+    public get(key: string): any {
         var array = this.map[this.stringHash(key, this.maxSize)];
          
         if (typeof array === "undefined")
@@ -23,36 +23,50 @@ class HashMap {
         });
         return res;
     }
-    public put(key: String, value): void {
+    public put(key: string, value): any {
         var hash = this.stringHash(key, this.maxSize);
         if (typeof this.map[hash] === "undefined") {
             this.map[hash] = [];
         }
-        this.map[hash].push(new Entry(key, value));
-        this.size++;
+        var array = this.map[hash];
+        var replaced;
+        $.each(array, function (index, entry: Entry) {
+            if (entry.key == key) {
+                replaced = entry.value;
+                entry.value = value;
+            }
+        });
+        if (typeof replaced === "undefined") {
+            array.push(new Entry(key, value));
+            this.length++;
+        }
         // Expading if there is to much content for a to little array. Rehashing everything. 
-        if (this.size > this.maxSize) {
+        if (this.length > (this.maxSize * this.maxFill)) {
             this.rehashTo(this.maxSize * 2 + 2);
         }
-
+        return replaced;
     }
-    public remove(key: String) : bool {
+    public remove(key: string) : bool {
         var array = this.map[this.stringHash(key, this.maxSize)];
         if (typeof array === "undefined")
             return false;
         var found = false;
+        var that = this;
         $.each(array, function (index: number, value: Entry) {
             if (value.key == key) {
                 array.splice(index, 1);
                 found = true;
-                this.size--;
+                that.length--;
                 return false; // break;
             }
         });
-        if (this.size < this.maxSize / 2) {
+        if (this.length < this.maxSize) {
             this.rehashTo(Math.max(this.maxSize / 2, 10));
         }
         return found;
+    }
+    public size() {
+        return this.length;
     }
     public getEntryArray() {
         var res: Entry[] = [];
@@ -61,6 +75,48 @@ class HashMap {
                 $.each(value, function (index, value) {
                     res.push(value);
                 });
+            }
+        });
+        return res;
+    }
+    public serialize(translator?: Function): string {
+        var res = {};
+        $.each(this.getEntryArray, function (index, entry: Entry) {
+            var savedValue = entry.value;
+            if ($.isFunction(translator)) {
+                savedValue = translator(savedValue);
+            }
+            res[entry.key] = savedValue;
+        });
+        return JSON.stringify(res);
+    }
+    public deserialize(map: string, translator? : Function): void {
+        this.clear();
+        var that = this;
+        $.each(JSON.parse(map), function (index, value) {
+            if ($.isFunction(translator)) {
+                value = translator(value);
+            }
+            that.put(index, value);
+        });
+    }
+    public clear(): void {
+        this.length = 0;
+        this.map = [];
+    }
+    public getSome() : Entry {
+        var gotIt: bool = false;
+        var res;
+        $.each(this.map, function (index, value) {
+            if (typeof value !== "undefined") {
+                $.each(value, function (index, value) {
+                    res = value;
+                    gotIt = true;
+                    return false;
+                });
+            }
+            if (gotIt) {
+                return false;
             }
         });
         return res;
@@ -76,7 +132,7 @@ class HashMap {
         this.size = newMap.size;
         this.maxSize = newMap.maxSize;
     }
-    private stringHash(string: String, maxHash : number) {
+    private stringHash(string: string, maxHash : number) {
         var hash = 0;
         if (string.length == 0) return hash;
         for (var i = 0; i < string.length; i++) {
@@ -95,7 +151,7 @@ class HashMap {
 class ScriptLoader {
     private static scriptsFolder = "script/";
     private static loadedScripts = new HashMap();
-    private static getScript(url: String, callback: Function, cache: bool) {
+    private static getScript(url: string, callback: Function, cache: bool) {
         $.ajax({
             type: "GET",
             url: url,

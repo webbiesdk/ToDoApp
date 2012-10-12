@@ -10,7 +10,6 @@ $.fn.nodeName = function () {
 };
 class KeyboardHandler {
     constructor () {
-        throw 2;
         var that = this;
         var isCtrl = false;
         $(document).keyup(function (e) {

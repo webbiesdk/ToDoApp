@@ -3,8 +3,6 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 }
-/// <reference path="jquery.d.ts" />
-/// <reference path="basic.ts" />
 var Notes = (function () {
     function Notes(elem) {
         this.elem = elem;
@@ -24,6 +22,7 @@ var Notes = (function () {
         var note = this.noteMap.get(from);
         if(this.noteMap.remove(from)) {
             this.noteMap.put(to, note);
+            note.id = to;
             return true;
         }
         return false;
@@ -71,6 +70,7 @@ var Note = (function () {
         this.saver = saver;
         this.id = id;
         this.content = content;
+        var _this = this;
         var that = this;
         this.element = $("<div data-role='collapsible' data-iconpos='right'></div>");
         this.headline = $("<h3>" + this.getHeadline() + "</h3>");
@@ -78,18 +78,22 @@ var Note = (function () {
         this.textarea = $("<textarea>" + this.content + "</textarea>");
         this.textarea.keyup(function () {
             that.setContent(that.getContent(), false);
+            _.throttle(function () {
+                return saver.save(_this);
+            }, 300)();
         });
         this.element.append(this.textarea);
         var deleteButton = $("<a href='javascript:void(0)' class='button' data-role='button' data-icon='delete' data-inline='true'>Delete</a>");
         deleteButton.click(function () {
-            // Update the model
             that.saver.deleteNote(that);
+            return false;
         });
         this.element.append(deleteButton);
         var saveButton = $("<a href='index.html' class='saveButton button' data-role='button' data-icon='check' data-theme='b' data-inline='true'>Save</a>");
         saveButton.click(function () {
             that.saver.save(that);
             that.collapse();
+            return false;
         });
         this.element.append(saveButton);
         this.element.bind('expand', function () {
@@ -139,6 +143,7 @@ var Note = (function () {
         return JSON.stringify(serialized);
     };
     Note.deSerializeToNew = function deSerializeToNew(noteString, saver) {
+        console.log(noteString);
         var note = new Note(saver);
         note.deSerializeIntoThis(noteString);
         return note;
@@ -163,7 +168,7 @@ var NewNote = (function (_super) {
         _super.call(this, saver, Note.getNextTempId(), "New note");
         var that = this;
         this.element.one("expand", function () {
-            saver.save(that);
+            saver.add(that);
             NewNote.removeContentOverTime(that, 400, function () {
                 that.textarea.focus();
                 notes.addFirst(new NewNote(saver, notes));

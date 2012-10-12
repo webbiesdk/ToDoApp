@@ -1,6 +1,7 @@
-/// <reference path="../jquery.d.ts" />
+/// <reference path="jquery.d.ts" />
+
 interface ServerCallObject {
-    callback(data?: any): Function;
+    callback(data: any): Function;
     errorCallback? (data: String): Function;
 }
 // Any call that requires the user to login. 
@@ -23,13 +24,13 @@ interface LoginObject extends ServerCallObject, ServerLoginObject {
 interface LogoutObject extends ServerCallObject { }
 
 interface DeleteNoteObject extends ServerCallObject, ServerLoginObject {
-    id: number;
+    id: string;
 }
 
 interface AddNoteObject extends ServerCallObject, ServerLoginObject {}
 
 interface SaveNoteObject extends ServerCallObject, ServerLoginObject { 
-    id: number; 
+    id: string; 
     content: String;
 }
 
@@ -43,14 +44,16 @@ interface GetNotesObject extends ServerCallObject, ServerLoginObject {
 
 class Server {
     constructor (private serverPath: string) { };
-    private post(data: any, callback: Function) {
-        $.post(this.serverPath, data, callback);
+    private post(data: any, callback: Function, errorCallback: Function) {
+        $.post(this.serverPath, data, callback).error(function () { 
+            errorCallback();
+        });
     }
     public createUser(obj: CreateUserObject) {
         this.post({ createUser: obj.username, password: obj.password, remember: obj.remember }, function (data) {
             if (data == 1) {
                 if ($.isFunction(obj.callback)) {
-                    obj.callback();
+                    obj.callback(data);
                 }
             }
             else if (data == 2) {
@@ -66,13 +69,17 @@ class Server {
                     console.log("Unhandled error/unknown data from server when trying to create user: " + data);
                 }
             }
+        }, function (data) {
+            if ($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
+            }
         });
     }
     public login(obj: LoginObject) {
         this.post({ login: obj.username, password: obj.password, remember: obj.remember }, function (data) {
             if (data == 1) {
                 if ($.isFunction(obj.callback)) {
-                    obj.callback();
+                    obj.callback(data);
                 }
             }
             else if (data == 3) {
@@ -88,6 +95,10 @@ class Server {
                     console.log("Unhandled error/unknown data from server when trying to login: " + data);
                 }
             }
+        }, function (data) {
+            if ($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
+            }
         });
     }
     public logOut(obj: LogoutObject) {
@@ -96,7 +107,7 @@ class Server {
 			if (data == 1)
 			{
 				if ($.isFunction(obj.callback)) {
-                    obj.callback();
+                    obj.callback(data);
                 }
 			}
             else {
@@ -107,13 +118,17 @@ class Server {
                     console.log("Unhandled error/unknown data from server when trying to logut: " + data);
                 }
             }
-		});
+		}, function (data) {
+            if ($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
+            }
+        });
     }
     public deleteNote(obj: DeleteNoteObject) {
         this.post({ deleteNote: obj.id }, function (data) {
             if (data == 1) {
                 if ($.isFunction(obj.callback)) {
-                    obj.callback();
+                    obj.callback(data);
                 }
             }
             else if (data == 3) {
@@ -128,6 +143,10 @@ class Server {
                 else {
                     console.log("Unhandled error/unknown data from server when trying to delete note(" + obj.id + "): " + data);
                 }
+            }
+        }, function (data) {
+            if ($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
             }
         });
     }
@@ -152,13 +171,17 @@ class Server {
                     console.log("Unhandled error/unknown data from server when trying to add note: " + data);
                 }
             }
+        }, function (data) {
+            if ($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
+            }
         });
     }
     public saveNote(obj: SaveNoteObject) {
         this.post({ save: obj.id, content : obj.content }, function (data) {
             if (data == 1) {
                 if ($.isFunction(obj.callback)) {
-                    obj.callback();
+                    obj.callback(data);
                 }
             }
             else if (data == 3) {
@@ -174,26 +197,34 @@ class Server {
                     console.log("Unhandled error/unknown data from server when trying to save note(" + obj.id + "): " + data);
                 }
             }
+        }, function (data) {
+            if ($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
+            }
         });
     }
     public checkLogin(obj: CheckLoginObject) {
         this.post({ Checklogin: "ehhhh, here goes nothing" },
 		function(data) {
-			if (data == 1)
+			if (data != 3)
 			{
 				if ($.isFunction(obj.callback)) {
-                    obj.callback();
+                    obj.callback(data);
                 }
 			}
             else {
                 if ($.isFunction(obj.errorCallback)) {
-                    obj.errorCallback(data);
+                    obj.invalidLoginData();
                 }
                 else {
-                    console.log("Unhandled error/unknown data from server when trying to logut: " + data);
+                    console.log("Unhandled error/unknown data from server when trying to checklogin: " + data);
                 }
             }
-		});
+		}, function (data) {
+            if ($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
+            }
+        });
     }
     public getNotes(obj: GetNotesObject) {
         // Cannot just use post on this one, got to handle JSON

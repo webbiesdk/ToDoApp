@@ -1,0 +1,5 @@
+Add virker ikke (prøv at fjerne .keyup handler på textare). 
+
+Spørg server if exists... 
+
+login -> savall / getall

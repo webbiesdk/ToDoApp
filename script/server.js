@@ -2,8 +2,10 @@ var Server = (function () {
     function Server(serverPath) {
         this.serverPath = serverPath;
     }
-    Server.prototype.post = function (data, callback) {
-        $.post(this.serverPath, data, callback);
+    Server.prototype.post = function (data, callback, errorCallback) {
+        $.post(this.serverPath, data, callback).error(function () {
+            errorCallback();
+        });
     };
     Server.prototype.createUser = function (obj) {
         this.post({
@@ -13,7 +15,7 @@ var Server = (function () {
         }, function (data) {
             if(data == 1) {
                 if($.isFunction(obj.callback)) {
-                    obj.callback();
+                    obj.callback(data);
                 }
             } else {
                 if(data == 2) {
@@ -28,6 +30,10 @@ var Server = (function () {
                     }
                 }
             }
+        }, function (data) {
+            if($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
+            }
         });
     };
     Server.prototype.login = function (obj) {
@@ -38,7 +44,7 @@ var Server = (function () {
         }, function (data) {
             if(data == 1) {
                 if($.isFunction(obj.callback)) {
-                    obj.callback();
+                    obj.callback(data);
                 }
             } else {
                 if(data == 3) {
@@ -53,6 +59,10 @@ var Server = (function () {
                     }
                 }
             }
+        }, function (data) {
+            if($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
+            }
         });
     };
     Server.prototype.logOut = function (obj) {
@@ -61,7 +71,7 @@ var Server = (function () {
         }, function (data) {
             if(data == 1) {
                 if($.isFunction(obj.callback)) {
-                    obj.callback();
+                    obj.callback(data);
                 }
             } else {
                 if($.isFunction(obj.errorCallback)) {
@@ -69,6 +79,10 @@ var Server = (function () {
                 } else {
                     console.log("Unhandled error/unknown data from server when trying to logut: " + data);
                 }
+            }
+        }, function (data) {
+            if($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
             }
         });
     };
@@ -78,7 +92,7 @@ var Server = (function () {
         }, function (data) {
             if(data == 1) {
                 if($.isFunction(obj.callback)) {
-                    obj.callback();
+                    obj.callback(data);
                 }
             } else {
                 if(data == 3) {
@@ -92,6 +106,10 @@ var Server = (function () {
                         console.log("Unhandled error/unknown data from server when trying to delete note(" + obj.id + "): " + data);
                     }
                 }
+            }
+        }, function (data) {
+            if($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
             }
         });
     };
@@ -116,6 +134,10 @@ var Server = (function () {
                     }
                 }
             }
+        }, function (data) {
+            if($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
+            }
         });
     };
     Server.prototype.saveNote = function (obj) {
@@ -125,7 +147,7 @@ var Server = (function () {
         }, function (data) {
             if(data == 1) {
                 if($.isFunction(obj.callback)) {
-                    obj.callback();
+                    obj.callback(data);
                 }
             } else {
                 if(data == 3) {
@@ -140,22 +162,30 @@ var Server = (function () {
                     }
                 }
             }
+        }, function (data) {
+            if($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
+            }
         });
     };
     Server.prototype.checkLogin = function (obj) {
         this.post({
             Checklogin: "ehhhh, here goes nothing"
         }, function (data) {
-            if(data == 1) {
+            if(data != 3) {
                 if($.isFunction(obj.callback)) {
-                    obj.callback();
+                    obj.callback(data);
                 }
             } else {
                 if($.isFunction(obj.errorCallback)) {
-                    obj.errorCallback(data);
+                    obj.invalidLoginData();
                 } else {
-                    console.log("Unhandled error/unknown data from server when trying to logut: " + data);
+                    console.log("Unhandled error/unknown data from server when trying to checklogin: " + data);
                 }
+            }
+        }, function (data) {
+            if($.isFunction(obj.errorCallback)) {
+                obj.errorCallback(data);
             }
         });
     };

@@ -44,6 +44,9 @@ interface JQueryAjaxSettings {
 */
 interface JQueryXHR extends XMLHttpRequest {
    overrideMimeType();
+   succes(Function);
+   error(Function);
+   complete(Function);
 }
 
 /*
@@ -292,6 +295,7 @@ interface JQueryStatic {
    The jQuery instance members
 */
 interface JQuery {
+   popup(any);
    /****
     AJAX
    *****/

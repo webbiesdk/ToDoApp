@@ -7,7 +7,6 @@ $.fn.nodeName = function () {
 };
 var KeyboardHandler = (function () {
     function KeyboardHandler() {
-        throw 2;
         var that = this;
         var isCtrl = false;
         $(document).keyup(function (e) {

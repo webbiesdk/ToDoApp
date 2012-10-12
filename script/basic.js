@@ -8,11 +8,13 @@ var Entry = (function () {
     return Entry;
 })();
 var HashMap = (function () {
-    function HashMap(maxSize) {
+    function HashMap(maxSize, maxFill) {
         if (typeof maxSize === "undefined") { maxSize = 10; }
+        if (typeof maxFill === "undefined") { maxFill = 3; }
         this.maxSize = maxSize;
+        this.maxFill = maxFill;
         this.map = [];
-        this.size = 0;
+        this.length = 0;
     }
     HashMap.prototype.get = function (key) {
         var array = this.map[this.stringHash(key, this.maxSize)];
@@ -34,12 +36,23 @@ var HashMap = (function () {
         if(typeof this.map[hash] === "undefined") {
             this.map[hash] = [];
         }
-        this.map[hash].push(new Entry(key, value));
-        this.size++;
+        var array = this.map[hash];
+        var replaced;
+        $.each(array, function (index, entry) {
+            if(entry.key == key) {
+                replaced = entry.value;
+                entry.value = value;
+            }
+        });
+        if(typeof replaced === "undefined") {
+            array.push(new Entry(key, value));
+            this.length++;
+        }
         // Expading if there is to much content for a to little array. Rehashing everything.
-        if(this.size > this.maxSize) {
+        if(this.length > (this.maxSize * this.maxFill)) {
             this.rehashTo(this.maxSize * 2 + 2);
         }
+        return replaced;
     };
     HashMap.prototype.remove = function (key) {
         var array = this.map[this.stringHash(key, this.maxSize)];
@@ -47,19 +60,23 @@ var HashMap = (function () {
             return false;
         }
         var found = false;
+        var that = this;
         $.each(array, function (index, value) {
             if(value.key == key) {
                 array.splice(index, 1);
                 found = true;
-                this.size--;
+                that.length--;
                 return false;// break;
                 
             }
         });
-        if(this.size < this.maxSize / 2) {
+        if(this.length < this.maxSize) {
             this.rehashTo(Math.max(this.maxSize / 2, 10));
         }
         return found;
+    };
+    HashMap.prototype.size = function () {
+        return this.length;
     };
     HashMap.prototype.getEntryArray = function () {
         var res = [];
@@ -68,6 +85,49 @@ var HashMap = (function () {
                 $.each(value, function (index, value) {
                     res.push(value);
                 });
+            }
+        });
+        return res;
+    };
+    HashMap.prototype.serialize = function (translator) {
+        var res = {
+        };
+        $.each(this.getEntryArray, function (index, entry) {
+            var savedValue = entry.value;
+            if($.isFunction(translator)) {
+                savedValue = translator(savedValue);
+            }
+            res[entry.key] = savedValue;
+        });
+        return JSON.stringify(res);
+    };
+    HashMap.prototype.deserialize = function (map, translator) {
+        this.clear();
+        var that = this;
+        $.each(JSON.parse(map), function (index, value) {
+            if($.isFunction(translator)) {
+                value = translator(value);
+            }
+            that.put(index, value);
+        });
+    };
+    HashMap.prototype.clear = function () {
+        this.length = 0;
+        this.map = [];
+    };
+    HashMap.prototype.getSome = function () {
+        var gotIt = false;
+        var res;
+        $.each(this.map, function (index, value) {
+            if(typeof value !== "undefined") {
+                $.each(value, function (index, value) {
+                    res = value;
+                    gotIt = true;
+                    return false;
+                });
+            }
+            if(gotIt) {
+                return false;
             }
         });
         return res;

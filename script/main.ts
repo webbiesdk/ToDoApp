@@ -5,10 +5,11 @@
 /// <reference path="notes.ts" />
 /// <reference path="savehandler.ts" />
 /// <reference path="keyboard.ts" />
+/// <reference path="login.ts" />
 
 
 var scripts = [
-    "http://webbies.dk/assets/files/SudoSlider/package/js/jquery.sudoSlider.min.js",
+    /* "http://webbies.dk/assets/files/SudoSlider/package/js/jquery.sudoSlider.min.js", */
             /* "script/server/server.js",  */
             /* "script/mobile.js",  */
             /* "script/notes.js",  */
@@ -17,8 +18,8 @@ var scripts = [
 ScriptLoader.loadScripts(scripts, function () {
     $(document).ready(function () {
         var notes = new Notes($("#notes"));
-        var saver = new SaveHandler(new Server("backend.php"), notes);
-        saver.initiate();
+        var server = new Server("backend.php");
+        var saver = new SaveHandler(new LoginHandler(saver, server), server, notes);
         var newNote = new NewNote(saver, notes);
         notes.addFirst(newNote, false);
         new KeyboardHandler();

@@ -1,5 +1,6 @@
 /// <reference path="jquery.d.ts" />
 /// <reference path="basic.ts" />
+declare var _;
 class Notes {
     private noteMap = new HashMap();
     constructor (private elem: JQuery) { }
@@ -16,8 +17,9 @@ class Notes {
     }
     public changeId(from: string, to: string): bool {
         var note: Note = this.noteMap.get(from);
-        if (this.noteMap.remove(from)) {
+        if (this.noteMap.remove(from)) { 
             this.noteMap.put(to, note);
+            note.id = to;
             return true;
         }
         return false;
@@ -74,18 +76,20 @@ class Note {
         this.textarea = $("<textarea>" + this.content + "</textarea>");
         this.textarea.keyup(function () {
             that.setContent(that.getContent(), false);
+            _.throttle(() => saver.save(this), 300)();
         });
         this.element.append(this.textarea);
         var deleteButton = $("<a href='javascript:void(0)' class='button' data-role='button' data-icon='delete' data-inline='true'>Delete</a>");
         deleteButton.click(function () {
-            // Update the model
             that.saver.deleteNote(that);
+            return false;
         });
         this.element.append(deleteButton);
         var saveButton = $("<a href='index.html' class='saveButton button' data-role='button' data-icon='check' data-theme='b' data-inline='true'>Save</a>");
         saveButton.click(function () {
             that.saver.save(that);
             that.collapse();
+            return false;   
         });
         this.element.append(saveButton);
 
@@ -130,6 +134,7 @@ class Note {
         return JSON.stringify(serialized);
     }
     public static deSerializeToNew(noteString: string, saver: SaveHandler): Note {
+        console.log(noteString);
         var note: Note = new Note(saver);
         note.deSerializeIntoThis(noteString);
         return note;
@@ -152,7 +157,7 @@ class NewNote extends Note {
         super(saver, Note.getNextTempId(), "New note");
         var that = this;
         this.element.one("expand", function () {
-            saver.save(that);
+            saver.add(that);
             NewNote.removeContentOverTime(that, 400, function () {
                 that.textarea.focus();
                 notes.addFirst(new NewNote(saver, notes));
