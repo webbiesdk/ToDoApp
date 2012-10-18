@@ -20,7 +20,12 @@ class SaveHandler {
         var that = this;
         this.server.getNotes({
             callback: function (data) {
+                var notesMap = new HashMap();
+                $.each(that.notes.getNotes(), function (index, value: Note) {
+                    notesMap.put(value.id, value);
+                });
                 $.each(data, function (id, value) {
+                    notesMap.remove(id);
                     // First see if we are about to save that value already.
                     if (!that.serverQueue.contains(id)) {
                         var note = that.notes.getNote(id);
@@ -40,6 +45,10 @@ class SaveHandler {
 
                 });
                 that.serverQueue.notify();
+                // Everything left in notesMap is to be deleted. 
+                $.each(notesMap.entryArray(), function (index, value: Entry) {
+                    that.deleteNote(value.key);
+                });
             },
             errorCallback: function () {
                 console.log("This really shouldn't happen: ");

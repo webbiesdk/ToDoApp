@@ -23,7 +23,6 @@ ScriptLoader.loadScripts(scripts, function () {
         var newNote = new NewNote(saver, notes);
         notes.addFirst(newNote, false);
         new KeyboardHandler();
-        
     });
 });
 

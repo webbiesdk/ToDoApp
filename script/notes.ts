@@ -63,8 +63,15 @@ class Notes {
     public getNotes() {
         var noteEntries = this.noteMap.entryArray();
         var res: Note[] = [];
-        $.each(noteEntries, function (index, value: Entry) {
-            res.push(value.value);
+        $.each(noteEntries, function (index, entry: Entry) {
+            if (entry.value instanceof NewNote) {
+                if (entry.value.realNote) {
+                    res.push(entry.value);
+                }
+            }
+            else {
+                res.push(entry.value);
+            }
         });
         return res;
     }
@@ -115,8 +122,15 @@ class Note {
         });
         this.element.append(saveButton);
 
+        var that = this;
         this.element.bind('expand', function () {
-            $(this).children().slideDown(400);
+            $(this).children().slideDown(400, function () {
+                var newHeight = 8.2 + (27 * that.textarea.val().split("\n").length);
+                var currentHeight = that.textarea.height();
+                if (newHeight > currentHeight) {
+                    that.textarea.height(newHeight);
+                }
+            });
         }).bind('collapse', function () {
             $(this).children().next().slideUp(400);
         });
@@ -193,11 +207,13 @@ class Note {
     }
 }
 class NewNote extends Note {
+    public realNote : bool = false;
     constructor (saver: SaveHandler, notes: Notes) {
         super(saver, Note.getNextTempId(), "New note");
         var that = this;
         this.element.one("expand", function () {
-            saver.add(that.id); // høns
+            that.realNote = true;
+            saver.add(that.id);
             NewNote.removeContentOverTime(that, 400, function () {
                 that.textarea.focus();
                 notes.addFirst(new NewNote(saver, notes));

@@ -151,7 +151,7 @@ if ( $_POST["logout"] )
 	// Simple, effective. 
 	$ID = $_COOKIE['ToDoSID'];
 	mysql_query("DELETE FROM notes_session WHERE sid='$ID'");
-	$pastdate = mktime(0,0,0,1,1,1970);
+	$pastdate = mktime(0,0,0,2,2,1970);
 	setcookie("ToDoSID","",$pastdate, '/', 'webbies.dk');
 	echo '1';// 1 == no errors. 
 }
@@ -165,11 +165,22 @@ if ( $_POST["save"] )
 	$content = mysql_real_escape_string(stripslashes($content));
 	if ($user)
 	{
-		mysql_query("UPDATE notes_notes SET note = '$content' WHERE guid = '$id' AND username = '$user'") OR DIE(mysql_error());
-		echo '1';
-		$data[$id] = $_POST["content"];
-		$data = json_encode($data);
-		pusher_sync($data);
+		$foundRow = false;
+		$query = mysql_query("SELECT * FROM notes_notes WHERE guid = '$id' AND username = '$user'") OR DIE(mysql_error());
+		while($row = mysql_fetch_assoc($query)) //Lav en while der kører alle rækker igennem
+		{
+			$foundRow = true;
+		}
+		if (!$foundRow) {
+			echo "4";
+		}
+		else {
+			mysql_query("UPDATE notes_notes SET note = '$content' WHERE guid = '$id' AND username = '$user'") OR DIE(mysql_error());
+			echo '1';
+			$data[$id] = $_POST["content"];
+			$data = json_encode($data);
+			pusher_sync($data);
+		}
 	}
 	else
 	{

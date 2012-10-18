@@ -143,7 +143,7 @@ var HashMap = (function () {
         });
         this.map = newMap.map;
         this.size = newMap.size;
-        this.maxSize = newMap.maxSize;
+        this.maxSize = newSize;
     };
     HashMap.prototype.stringHash = function (string, maxHash) {
         var hash = 0;

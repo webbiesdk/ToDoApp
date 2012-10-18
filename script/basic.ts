@@ -132,7 +132,7 @@ class HashMap {
         });
         this.map = newMap.map;
         this.size = newMap.size;
-        this.maxSize = newMap.maxSize;
+        this.maxSize = newSize;
     }
     private stringHash(string: string, maxHash : number) {
         var hash = 0;
