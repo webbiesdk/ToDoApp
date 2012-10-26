@@ -89,9 +89,6 @@ var SaveHandler = (function () {
         // View
         if(updateView) {
             if(!this.notes.contains(note.id)) {
-                console.log("Adding: " + note.id);
-                console.log(this.serverQueue.contains(note.id));
-                console.log(this.notes.getNotes());
                 this.notes.add(note);
             }
         }
@@ -121,7 +118,7 @@ var SaveHandler = (function () {
                 // Set the new ID in the content.
                 that.notes.changeId(id, newId);
                 // And in the locally saved content.
-                var content = localStorage["note_" + id];
+                var content = that.getLocalNote(id);
                 that.deleteLocal(id);
                 var newNote = new Note(that);
                 if(typeof content !== "undefined") {
@@ -193,25 +190,6 @@ var SaveHandler = (function () {
             }
         });
     };
-    SaveHandler.prototype.loadAllLocal = function () {
-        var ids = this.getLocalIds();
-        var that = this;
-        $.each(ids, function (index, value) {
-            var noteString = localStorage["note_" + value];
-            if(typeof noteString !== "undefined") {
-                that.insertNote(value, Note.deSerializeToNew(value, noteString, that));
-            } else {
-                console.log("Note not found in localstorage: " + ("note_" + value));
-            }
-        });
-    };
-    SaveHandler.prototype.saveLocal = function (note) {
-        this.saveLocalFromContent(note.id, note.serialize());
-    };
-    SaveHandler.prototype.saveLocalFromContent = function (id, content) {
-        this.addToLocalIds(id);
-        localStorage["note_" + id] = content;
-    };
     SaveHandler.prototype.insertNote = function (id, note, force) {
         if (typeof force === "undefined") { force = false; }
         if(this.notes.contains(id)) {
@@ -222,47 +200,111 @@ var SaveHandler = (function () {
             this.notes.add(note);
         }
     };
-    SaveHandler.prototype.deleteLocal = function (id) {
-        localStorage.removeItem("note_" + id);
-        var ids = this.getLocalIds();
-        var idIndex = ids.indexOf(id);
-        ids.splice(idIndex, 1);
-        this.saveLocalIds(ids);
-    };
-    SaveHandler.prototype.clearLocal = function () {
-        var undefined;
-        var ids = this.getLocalIds();
-        var that = this;
-        $.each(ids, function (index, value) {
-            localStorage.removeItem("note_" + value);
-        });
-        localStorage["notes_idList"] = "";
-    };
-    SaveHandler.prototype.addToLocalIds = function (id) {
-        var ids = this.getLocalIds();
-        if($.inArray(id, ids) === -1) {
-            ids.push(id);
-            this.saveLocalIds(ids);
+    SaveHandler.prototype.saveAllLocal = function (notes) {
+        this.notesCache = notes;
+        for(var a in notes) {
+            var note = (notes[a]).note;
+            note = note.replace(/&/g, '&amp;');
+            note = note.replace(/\"/g, '&#34;');
+            note = note.replace(/\n/g, '&newLine;');
+            (notes[a]).note = note;
         }
+        localStorage.setItem("notes", JSON.stringify(notes));
     };
-    SaveHandler.prototype.saveLocalIds = function (ids) {
-        var res = "";
-        $.each(ids, function (index, value) {
-            res += value + ",";
-        });
-        localStorage["notes_idList"] = res;
-    };
-    SaveHandler.prototype.getLocalIds = function () {
-        if(typeof localStorage["notes_idList"] === "undefined") {
-            localStorage["notes_idList"] = "";
+    SaveHandler.prototype.getAllLocal = function () {
+        if(typeof this.notesCache === "undefined") {
+            var notes = localStorage.getItem("notes");
+            if(typeof notes !== "undefined") {
+                try  {
+                    var res = JSON.parse(notes);
+                    for(var a in res) {
+                        var note = (res[a]).note;
+                        // Unescaping.
+                        note = note.replace(/&newLine;/g, '\n');
+                        note = note.replace(/&#34;/g, '"');
+                        note = note.replace(/&amp;/g, '&');
+                        (res[a]).note = note;
+                    }
+                    if(res == null || typeof res === "undefined") {
+                        return [];
+                    }
+                    this.notesCache = res;
+                    return res;
+                } catch (e) {
+                    console.log("Catched: " + e);
+                    // Nothing, just exiting.
+                                    }
+            }
             return [];
         } else {
-            var res = localStorage["notes_idList"].split(',');
-            if(!res[res.length - 1]) {
-                res.pop();
-            }
-            return res;
+            return this.notesCache;
         }
+    };
+    SaveHandler.prototype.getLocalNote = function (id) {
+        var that = this;
+        var res;
+        $.each(this.getAllLocal(), function (index, value) {
+            if(value.id == id) {
+                res = value.note;
+                return false;// break;
+                
+            }
+        });
+        return res;
+    };
+    SaveHandler.prototype.loadAllLocal = function () {
+        var that = this;
+        var notes = this.getAllLocal();
+        $.each(notes, function (index, value) {
+            var noteString = value.note;
+            var id = value.id;
+            if(typeof noteString !== "undefined") {
+                that.insertNote(id, Note.deSerializeToNew(id, noteString, that));
+            } else {
+                console.log("What????: " + ("note: " + value));
+            }
+        });
+    };
+    SaveHandler.prototype.saveLocal = function (note) {
+        this.saveLocalFromContent(note.id, note.serialize());
+    };
+    SaveHandler.prototype.saveLocalFromContent = function (id, content) {
+        var notes = this.getAllLocal();
+        var replaced = false;
+        for(var i = 0; i < notes.length; i++) {
+            var tmpNote = notes[i];
+            if(tmpNote.id == id) {
+                tmpNote.note = content;
+                replaced = true;
+                break;
+            }
+        }
+        if(!replaced) {
+            notes.push({
+                id: id,
+                note: content
+            });
+        }
+        this.saveAllLocal(notes);
+    };
+    SaveHandler.prototype.deleteLocal = function (id) {
+        console.log("Delete: " + id);
+        var notes = this.getAllLocal();
+        console.log(notes);
+        var index = 0;
+        for(var a in notes) {
+            var note = notes[a];
+            if(note.id == id) {
+                notes.splice(index, 1);
+                break;
+            }
+            index++;
+        }
+        console.log(notes);
+        this.saveAllLocal(notes);
+    };
+    SaveHandler.prototype.clearLocal = function () {
+        localStorage.removeItem("notes");
     };
     return SaveHandler;
 })();
